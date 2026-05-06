@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кабінет студента</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Навчальні нотатки</h1>
+    </header>
+
+    <main>
+
+    
+        <section>
+            <h2>Пошук</h2>
+            <div class="toolbar">
+                <input type="text" id="searchInput" placeholder="Пошук...">
+
+               
+                <select id="courseFilter">
+                    <option value="">Усі дисципліни</option>
+                </select>
+            </div>
+        </section>
+
+      
+        <section>
+            <h2 id="formTitle">Додати нотатку</h2>
+
+            <form id="noteForm">
+               
+                <input type="hidden" id="noteId">
+
+                <div class="field">
+                    <label>Дисципліна</label>
+                    <select id="courseSelect" required>
+                        <option value="">Оберіть курс...</option>
+                    </select>
+                    <p class="error-text" id="courseError"></p>
+                </div>
+
+                <div class="field">
+                    <label>Заголовок</label>
+                    <input type="text" id="titleInput">
+                    <p class="error-text" id="titleError"></p>
+                </div>
+
+                <div class="field">
+                    <label>Зміст</label>
+                    <textarea id="noteText"></textarea>
+                    <p class="error-text" id="noteError"></p>
+                </div>
+
+                <div class="buttons">
+                    <button type="submit" id="submitBtn">Зберегти</button>
+                    <button type="button" id="resetBtn">Очистити</button>
+                </div>
+            </form>
+        </section>
+
+        
+        <section>
+            <h2>Список нотаток</h2>
+
+            <table>
+                <thead>
+                <tr>
+                    <th>Курс</th>
+                    <th>Назва</th>
+                    <th>Зміст</th>
+                    <th>Дата</th>
+                    <th>Дії</th>
+                </tr>
+                </thead>
+
+                <tbody id="notesTableBody"></tbody>
+            </table>
+        </section>
+
+    </main>
+</div>
+</body>
+</html>
