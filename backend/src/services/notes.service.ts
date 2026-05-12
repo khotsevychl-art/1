@@ -3,9 +3,40 @@ import { CreateNoteDto, UpdateNoteDto, NoteResponseDto } from "../domain/note.dt
 import { randomUUID } from "crypto";
 
 export class NotesService {
-  getAll(courseId?: string) {
-    return courseId ? notes.filter(n => n.courseId === courseId) : notes;
-  }
+ getAll(
+  courseId?: string,
+  page = 1,
+  pageSize = 10,
+  sortBy: "title" | "createdAt" = "createdAt",
+  sortDir: "asc" | "desc" = "desc"
+) {
+  let filtered = courseId
+    ? notes.filter(n => n.courseId === courseId)
+    : notes;
+
+  filtered = filtered.sort((a, b) => {
+    const valA = a[sortBy];
+    const valB = b[sortBy];
+
+    if (valA < valB) return sortDir === "asc" ? -1 : 1;
+    if (valA > valB) return sortDir === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const total = filtered.length;
+
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+
+  return {
+    items: filtered.slice(start, end),
+    total,
+    page,
+    pageSize,
+    sortBy,
+    sortDir
+  };
+}
 
   getById(id: string) {
     return notes.find(n => n.id === id);

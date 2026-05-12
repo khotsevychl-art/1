@@ -4,11 +4,16 @@ import { CreateNoteDto, UpdateNoteDto } from "../domain/note.dto";
 
 const service = new NotesService();
 
-export const getNotes = (
-  req: Request<{}, {}, {}, { courseId?: string }>,
-  res: Response
-) => {
-  res.json({ items: service.getAll(req.query.courseId) });
+export const getNotes = (req: Request, res: Response) => {
+  const courseId = req.query.courseId as string | undefined;
+
+  const page = Number(req.query.page) || 1;
+  const pageSize = Number(req.query.pageSize) || 10;
+
+  const sortBy = (req.query.sortBy as "title" | "createdAt") || "createdAt";
+  const sortDir = (req.query.sortDir as "asc" | "desc") || "desc";
+
+  res.json(service.getAll(courseId, page, pageSize, sortBy, sortDir));
 };
 
 export const getNote = (
@@ -30,12 +35,14 @@ export const createNote = (
 };
 
 export const updateNote = (
-  req: Request<{ id: string }, {}, UpdateNoteDto>,
+  req: Request<{ id: string }>,
   res: Response,
   next: NextFunction
 ) => {
   const note = service.update(req.params.id, req.body);
+
   if (!note) return next(new Error("NOT_FOUND"));
+
   res.json(note);
 };
 

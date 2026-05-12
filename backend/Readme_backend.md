@@ -1,4 +1,4 @@
-Ось тобі готовий README.md під GitHub, нормально структурований, з запуском, API і прикладами — просто вставляй у репозиторій.
+
 
 #  Кабінет студента – REST API (Lab Work)
 
@@ -73,16 +73,32 @@ Response:
 ## Notes
 Отримати всі нотатки
 GET /api/notes
+
 Отримати нотатку по ID
 GET /api/notes/:id
+
 Створити нотатку
 POST /api/notes
 Content-Type: application/json
+
 {
-  "courseId": "math",
-  "title": "Підготовка до екзамену",
-  "note": "Розв’язати задачі 1-10"
+  "courseId": "1",
+  "title": "Інтеграли",
+  "note": "Повторити методи інтегрування"
 }
+{
+  "courseId": "2",
+  "title": "Мережі",
+  "note": "Вивчити TCP/IP модель"
+}
+{
+  "courseId": "3",
+  "title": "Шифрування",
+  "note": "AES та RSA алгоритми"
+}
+
+
+
 Оновити нотатку
 PUT /api/notes/:id
 {
@@ -92,13 +108,39 @@ PUT /api/notes/:id
 }
 Видалити нотатку
 DELETE /api/notes/:id
+
+201 for post
+
+{
+  "courseId": "1",
+  "title": "Math",
+  "note": "Study integrals"
+}
+
+204 delete
+DELETE /api/note/неіснуючийід
+
+
+
 Валідація
+POST  /api/notes
+{
+  "courseId": "99999",
+  "title": "І",
+  "note": ""
+}
+{
+  "courseId": "3",
+  "title": "Шифрування",
+  "note": "AES та RSA алгоритми"
+}
 
 API перевіряє:
 
 обов’язкові поля (courseId, title, note)
 мінімальну довжину title (≥ 3)
 мінімальну довжину note (≥ 5)
+
 
 У разі помилки повертається:
 

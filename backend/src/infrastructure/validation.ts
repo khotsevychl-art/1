@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { courses } from "../store/courses.store";
+import { notes } from "../store/notes.store";
 
 export class ApiError extends Error {
   status: number;
@@ -28,6 +29,16 @@ export const validateNote = (req: Request, res: Response, next: NextFunction) =>
   if (!note || note.length < 5)
     errors.push({ field: "note", message: "min 5 chars" });
 
+  const duplicate = notes.find(
+  n => n.note.toLowerCase() === note.toLowerCase()
+);
+
+  if (duplicate) {
+    errors.push({
+      field: "note",
+      message: "duplicate content"
+    });
+  }
   if (errors.length) {
     return next(new ApiError(400, "VALIDATION_ERROR", "Invalid data", errors));
   }
