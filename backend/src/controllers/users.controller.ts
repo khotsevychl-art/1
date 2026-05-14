@@ -3,11 +3,12 @@ import { UsersService } from "../services/users.service";
 
 const service = new UsersService();
 
-export const getUsers = (req: Request, res: Response) => {
-  res.json({ items: service.getAll() });
+export const getUsers = async (req: Request, res: Response) => {
+  const data = await service.getAll();
+  res.json({ data });
 };
 
-export const createUser = (req: Request, res: Response) => {
-  const user = service.create(req.body);
-  res.status(201).json(user);
+export const createUser = async (req: Request, res: Response) => {
+  const data = await service.create(req.body);
+  res.status(201).json({ data });
 };

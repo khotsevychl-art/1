@@ -1,7 +1,16 @@
-import { CourseDto } from "../domain/course.dto";
+import { db } from "../infrastructure/db";
 
-export const courses: CourseDto[] = [
-  { id: "1", name: "Вища математика" },
-  { id: "2", name: "ІТК" },
-  { id: "3", name: "Кібербезпека та захист інформації" }
-];
+export class CoursesStore {
+
+  getAll() {
+
+    return new Promise((resolve, reject) => {
+
+      db.all(`SELECT * FROM courses`, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+
+    });
+  }
+}

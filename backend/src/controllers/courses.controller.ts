@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
-import { courses } from "../store/courses.store";
+import { CoursesService } from "../services/courses.service";
 
-export const getCourses = (req: Request, res: Response) => {
-  res.json({ items: courses });
+const service = new CoursesService();
+
+export const getCourses = async (req: Request, res: Response) => {
+  const data = await service.getAll();
+  res.json({ data });
 };

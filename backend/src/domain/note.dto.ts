@@ -12,6 +12,7 @@ export interface UpdateNoteDto {
 
 export interface NoteResponseDto {
   id: string;
+  userId: string;
   courseId: string;
   title: string;
   note: string;

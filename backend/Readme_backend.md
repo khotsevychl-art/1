@@ -1,22 +1,21 @@
+# Кабінет студента — REST API (Node.js + Express + TypeScript + SQLite)
 
+## Загальна інформація
 
-#  Кабінет студента – REST API (Lab Work)
+Проєкт реалізує REST API для кабінету студента, де користувач може створювати та керувати навчальними нотатками, прив’язаними до курсів.
 
-## Опис проєкту
-
-Цей проєкт реалізує **REST API для кабінету студента**, де користувач може створювати та керувати навчальними нотатками, прив’язаними до дисциплін.
-
-Дані зберігаються **в оперативній пам’яті (in-memory)** без використання бази даних.
+Дані зберігаються в SQLite локально без використання ORM.
 
 ---
 
-##  Технології
+## Технології
 
 - Node.js
 - Express
 - TypeScript
+- SQLite (sqlite3)
 - ts-node-dev
-- In-memory storage (масиви)
+- SQL migrations (без ORM)
 
 ---
 
@@ -26,10 +25,17 @@
 src/
 ├── controllers/
 ├── services/
-├── routes/
 ├── store/
 ├── domain/
 ├── infrastructure/
+│ ├── db.ts
+│ ├── migrate.ts
+│ ├── seed.ts
+│ ├── validation.ts
+│ ├── migrations/
+│ │ ├── 001_init.sql
+│ │ ├── 002_indexes.sql
+├── middleware/
 ├── app.ts
 └── server.ts
 
@@ -38,131 +44,122 @@ src/
 
 ## Запуск проєкту
 
-### 1. Встановити залежності
+### Встановлення залежностей
 ```bash
 npm install
-2. Запустити сервер у dev режимі
+Запуск сервера
 npm run dev
-3. Сервер буде доступний:
+Сервер доступний
 http://localhost:3000
-Реалізовані сутності
-Courses (Дисципліни)
-id
-name
-Notes (Нотатки)
-id
-courseId
-title
-note
-createdAt
+База даних
+
+SQLite файл створюється локально:
+
+/data/app.db
+
+Міграції
+
+Проєкт використовує спрощені міграції без ORM.
+
+Структура:
+infrastructure/migrations/
+  001_init.sql
+  002_indexes.sql
+Логіка:
+при старті застосунку перевіряється таблиця schema_migrations
+виконуються тільки нові міграції
+застосовані міграції записуються в schema_migrations
+Схема бази даних
+Таблиці
+
+users
+
+id (TEXT, PRIMARY KEY)
+name (TEXT, NOT NULL)
+
+courses
+
+id (TEXT, PRIMARY KEY)
+name (TEXT, NOT NULL)
+
+notes
+
+id (TEXT, PRIMARY KEY)
+user_id (TEXT, NOT NULL, FOREIGN KEY → users.id)
+course_id (TEXT, NOT NULL, FOREIGN KEY → courses.id)
+title (TEXT, NOT NULL)
+note (TEXT, NOT NULL)
+created_at (TEXT, NOT NULL)
+Зв’язки
+users (1) → (M) notes
+courses (1) → (M) notes
+
+Обмеження
+NOT NULL для обов’язкових полів
+PRIMARY KEY для всіх таблиць
+FOREIGN KEY для зв’язків notes → users, courses
+INDEX для course_id та created_at
 API Endpoints
-
-## Courses
-Отримати всі курси
+Users
+GET /api/users
+POST /api/users
+Courses
 GET /api/courses
-
-Response:
-
-{
-  "items": [
-    { "id": "math", "name": "Вища математика" },
-    { "id": "itk", "name": "ІТК" }
-  ]
-}
-
-## Notes
-Отримати всі нотатки
+Notes
 GET /api/notes
-
-Отримати нотатку по ID
 GET /api/notes/:id
-
-Створити нотатку
 POST /api/notes
-Content-Type: application/json
-
-{
-  "courseId": "1",
-  "title": "Інтеграли",
-  "note": "Повторити методи інтегрування"
-}
-{
-  "courseId": "2",
-  "title": "Мережі",
-  "note": "Вивчити TCP/IP модель"
-}
-{
-  "courseId": "3",
-  "title": "Шифрування",
-  "note": "AES та RSA алгоритми"
-}
-
-
-
-Оновити нотатку
 PUT /api/notes/:id
-{
-  "courseId": "itk",
-  "title": "Оновлена тема",
-  "note": "Новий текст"
-}
-Видалити нотатку
 DELETE /api/notes/:id
+WHERE + ORDER BY + LIMIT
+GET /api/notes?courseId=1&sort=created_at
 
-201 for post
+SQL:
 
+SELECT * FROM notes
+WHERE course_id='1'
+ORDER BY created_at DESC
+LIMIT 10;
+JOIN endpoint
+GET /api/notes/relations/all
+
+Повертає нотатки разом з користувачем і курсом.
+
+Агрегація (COUNT)
+GET /api/notes/stats/all
+SELECT course_id, COUNT(*) as total
+FROM notes
+GROUP BY course_id;
+SQL Injection (демонстрація)
+WHERE course_id='${courseId}'
+
+Приклад небезпечного вводу:
+
+1' OR '1'='1
+Формат відповіді
+Успіх
 {
-  "courseId": "1",
-  "title": "Math",
-  "note": "Study integrals"
+  "data": []
 }
-
-204 delete
-DELETE /api/note/неіснуючийід
-
-
-
-Валідація
-POST  /api/notes
-{
-  "courseId": "99999",
-  "title": "І",
-  "note": ""
-}
-{
-  "courseId": "3",
-  "title": "Шифрування",
-  "note": "AES та RSA алгоритми"
-}
-
-API перевіряє:
-
-обов’язкові поля (courseId, title, note)
-мінімальну довжину title (≥ 3)
-мінімальну довжину note (≥ 5)
-
-
-У разі помилки повертається:
-
+Помилка
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Invalid request"
+    "message": "Invalid data"
   }
 }
+HTTP статуси
+200 OK
+201 Created
+204 No Content
+400 Bad Request
+404 Not Found
+409 Conflict
+500 Internal Server Error
 
-Приклади CURL
-Створити нотатку
-curl -X POST http://localhost:3000/api/notes \
--H "Content-Type: application/json" \
--d "{\"courseId\":\"math\",\"title\":\"Test\",\"note\":\"Hello world\"}"
-Отримати нотатки
-curl http://localhost:3000/api/notes
-
-Особливості
-REST API без бази даних
-In-memory зберігання
-UUID генерація ID
-DTO-структура
-Централізована обробка помилок
-Фільтрація нотаток по курсах
+Додаткові можливості
+JOIN запити
+агрегація (COUNT)
+фільтрація + сортування + LIMIT
+міграції без ORM
+централізована обробка помилок
