@@ -1,22 +1,37 @@
-import { db } from "./db";
+import { get, run } from "./db";
+import { sqlString } from "../utils/sql";
 
-export const seedDatabase = () => {
-  console.log("[INFO] Start seed");
+type CountRow = { count: number };
 
-  db.serialize(() => {
-    db.run(`
-      INSERT OR IGNORE INTO users (id, name, created_at)
-      VALUES ('1', 'Student', datetime('now'))
-    `);
+export async function seedDatabase(): Promise<void> {
+  const usersCount = await get<CountRow>("SELECT COUNT(*) as count FROM users");
+  if ((usersCount?.count || 0) > 0) {
+    console.log("[SEED] skipped: data already exists");
+    return;
+  }
 
-    db.run(`
-      INSERT OR IGNORE INTO courses (id, name)
-      VALUES 
-        ('1', 'Math'),
-        ('2', 'ITK'),
-        ('3', 'Security')
-    `);
-  });
+  console.log("[SEED] start");
 
-  console.log("[INFO] Seed completed");
-};
+  await run(
+    `INSERT INTO users (id, name, created_at) VALUES (${sqlString("1")}, ${sqlString("Основний користувач")}, ${sqlString(new Date().toISOString())})`
+  );
+
+  await run(`INSERT INTO courses (id, name) VALUES (${sqlString("1")}, ${sqlString("Вища математика")})`);
+  await run(`INSERT INTO courses (id, name) VALUES (${sqlString("2")}, ${sqlString("ІТК")})`);
+  await run(`INSERT INTO courses (id, name) VALUES (${sqlString("3")}, ${sqlString("Кібербезпека та захист інформації")})`);
+
+  await run(
+    `INSERT INTO notes (id, user_id, course_id, title, note, created_at)
+     VALUES (${sqlString("seed-note-1")}, ${sqlString("1")}, ${sqlString("1")}, ${sqlString("Інтеграли")}, ${sqlString("Повторити методи інтегрування")}, ${sqlString(new Date().toISOString())})`
+  );
+  await run(
+    `INSERT INTO notes (id, user_id, course_id, title, note, created_at)
+     VALUES (${sqlString("seed-note-2")}, ${sqlString("1")}, ${sqlString("2")}, ${sqlString("Мережі")}, ${sqlString("Вивчити TCP/IP модель")}, ${sqlString(new Date().toISOString())})`
+  );
+  await run(
+    `INSERT INTO notes (id, user_id, course_id, title, note, created_at)
+     VALUES (${sqlString("seed-note-3")}, ${sqlString("1")}, ${sqlString("3")}, ${sqlString("Шифрування")}, ${sqlString("AES та RSA алгоритми")}, ${sqlString(new Date().toISOString())})`
+  );
+
+  console.log("[SEED] completed");
+}

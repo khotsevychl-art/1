@@ -1,166 +1,201 @@
-import { db } from "../infrastructure/db";
 import { randomUUID } from "crypto";
+import { all, get, run } from "../infrastructure/db";
+import { sqlNumber, sqlString } from "../utils/sql";
+
+export type NoteRow = {
+  id: string;
+  user_id: string;
+  course_id: string;
+  title: string;
+  note: string;
+  created_at: string;
+};
+
+export type NoteWithRelationsRow = NoteRow & {
+  course_name: string;
+  user_name: string;
+};
+
+export type NoteStatsRow = {
+  course_id: string;
+  course_name: string;
+  notes_count: number;
+  total_note_length: number;
+  average_note_length: number;
+};
+
+export type NotesListParams = {
+  courseId?: string;
+  userId?: string;
+  sort: string;
+  order: "ASC" | "DESC";
+  page: number;
+  pageSize: number;
+};
 
 export class NotesStore {
+  async getAll(params: NotesListParams): Promise<NoteRow[]> {
+    const where: string[] = [];
 
-  getAll(courseId?: string, sort = "created_at") {
-    return new Promise((resolve, reject) => {
-      let sql = `SELECT * FROM notes`;
+    if (params.courseId) {
+      where.push(`course_id = ${sqlString(params.courseId)}`);
+    }
+    if (params.userId) {
+      where.push(`user_id = ${sqlString(params.userId)}`);
+    }
 
-      if (courseId) {
-        sql += ` WHERE course_id='${courseId}'`;
-      }
+    const offset = (params.page - 1) * params.pageSize;
+    let sql = "SELECT * FROM notes";
 
-      sql += ` ORDER BY ${sort} DESC LIMIT 10`;
+    if (where.length > 0) {
+      sql += ` WHERE ${where.join(" AND ")}`;
+    }
 
-      db.all(sql, (err, rows) => {
-        if (err) {
-          console.log("SQL ERROR (getAll):", err);
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+    sql += ` ORDER BY ${params.sort} ${params.order}`;
+    sql += ` LIMIT ${sqlNumber(params.pageSize)} OFFSET ${sqlNumber(offset)}`;
+
+    return all<NoteRow>(sql);
   }
 
-  getById(id: string) {
-    return new Promise((resolve, reject) => {
-      db.get(
-        `SELECT * FROM notes WHERE id='${id}'`,
-        (err, row) => {
-          if (err) {
-            console.log("SQL ERROR (getById):", err);
-            reject(err);
-          } else {
-            resolve(row);
-          }
-        }
-      );
-    });
+  async getById(id: string): Promise<NoteRow | undefined> {
+    return get<NoteRow>(`SELECT * FROM notes WHERE id = ${sqlString(id)}`);
   }
 
-  create(note: any) {
-  console.log("CREATE NOTE INPUT:", note);
+  async getByNoteText(note: string): Promise<NoteRow | undefined> {
+    return get<NoteRow>(`SELECT * FROM notes WHERE note = ${sqlString(note)}`);
+  }
 
-  return new Promise((resolve, reject) => {
+  async countByCourse(courseId: string): Promise<number> {
+    const row = await get<{ count: number }>(`SELECT COUNT(*) AS count FROM notes WHERE course_id = ${sqlString(courseId)}`);
+    return row?.count || 0;
+  }
+
+  async countByUser(userId: string): Promise<number> {
+    const row = await get<{ count: number }>(`SELECT COUNT(*) AS count FROM notes WHERE user_id = ${sqlString(userId)}`);
+    return row?.count || 0;
+  }
+
+  async create(data: { userId: string; courseId: string; title: string; note: string }): Promise<NoteRow> {
     const id = randomUUID();
     const createdAt = new Date().toISOString();
 
-    const sql = `
-      INSERT INTO notes(
-        id, user_id, course_id, title, note, created_at
-      )
-      VALUES(
-        '${id}',
-        '1',
-        '${note.courseId}',
-        '${note.title}',
-        '${note.note}',
-        '${createdAt}'
-      )
+    await run(
+      `INSERT INTO notes (id, user_id, course_id, title, note, created_at)
+       VALUES (${sqlString(id)}, ${sqlString(data.userId)}, ${sqlString(data.courseId)}, ${sqlString(data.title)}, ${sqlString(data.note)}, ${sqlString(createdAt)})`
+    );
+
+    const created = await this.getById(id);
+    if (!created) {
+      throw new Error("Created note was not found");
+    }
+    return created;
+  }
+
+  async update(id: string, data: { courseId?: string; title?: string; note?: string }): Promise<NoteRow | undefined> {
+    const updates: string[] = [];
+
+    if (data.courseId !== undefined) updates.push(`course_id = ${sqlString(data.courseId)}`);
+    if (data.title !== undefined) updates.push(`title = ${sqlString(data.title)}`);
+    if (data.note !== undefined) updates.push(`note = ${sqlString(data.note)}`);
+
+    if (updates.length === 0) {
+      return this.getById(id);
+    }
+
+    await run(`UPDATE notes SET ${updates.join(", ")} WHERE id = ${sqlString(id)}`);
+    return this.getById(id);
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const result = await run(`DELETE FROM notes WHERE id = ${sqlString(id)}`);
+    return result.changes > 0;
+  }
+
+  async getWithRelations(params: NotesListParams): Promise<NoteWithRelationsRow[]> {
+    const where: string[] = [];
+
+    if (params.courseId) {
+      where.push(`notes.course_id = ${sqlString(params.courseId)}`);
+    }
+    if (params.userId) {
+      where.push(`notes.user_id = ${sqlString(params.userId)}`);
+    }
+
+    const offset = (params.page - 1) * params.pageSize;
+    let sql = `
+      SELECT
+        notes.id,
+        notes.user_id,
+        notes.course_id,
+        notes.title,
+        notes.note,
+        notes.created_at,
+        courses.name AS course_name,
+        users.name AS user_name
+      FROM notes
+      JOIN courses ON notes.course_id = courses.id
+      JOIN users ON notes.user_id = users.id
     `;
 
-    db.run(sql, (err) => {
-      if (err) {
-        console.log("SQL ERROR (create):", err);
-        reject(err);
-      } else {
-        resolve({
-          id,
-          userId: "1",
-          courseId: note.courseId,
-          title: note.title,
-          note: note.note,
-          createdAt
-        });
-      }
-    });
-  });
-}
+    if (where.length > 0) {
+      sql += ` WHERE ${where.join(" AND ")}`;
+    }
 
-  update(id: string, note: any) {
-    return new Promise((resolve, reject) => {
-      db.run(
-        `
-        UPDATE notes
-        SET
-          course_id='${note.courseId}',
-          title='${note.title}',
-          note='${note.note}'
-        WHERE id='${id}'
-        `,
-        (err) => {
-          if (err) {
-            console.log("SQL ERROR (update):", err);
-            reject(err);
-          } else {
-            resolve(note);
-          }
-        }
-      );
-    });
+    sql += ` ORDER BY notes.${params.sort} ${params.order}`;
+    sql += ` LIMIT ${sqlNumber(params.pageSize)} OFFSET ${sqlNumber(offset)}`;
+
+    return all<NoteWithRelationsRow>(sql);
   }
 
-  delete(id: string) {
-    return new Promise((resolve, reject) => {
-      db.run(
-        `DELETE FROM notes WHERE id='${id}'`,
-        (err) => {
-          if (err) {
-            console.log("SQL ERROR (delete):", err);
-            reject(err);
-          } else {
-            resolve(true);
-          }
-        }
-      );
-    });
+  async searchTeachingDemo(params: { q?: string; courseId?: string; sort: string; order: "ASC" | "DESC"; page: number; pageSize: number }): Promise<NoteWithRelationsRow[]> {
+    const where: string[] = [];
+
+    
+    if (params.q) {
+      where.push(`(notes.title LIKE ${sqlString(`%${params.q}%`)} OR notes.note LIKE ${sqlString(`%${params.q}%`)})`);
+    }
+    if (params.courseId) {
+      where.push(`notes.course_id = ${sqlString(params.courseId)}`);
+    }
+
+    const offset = (params.page - 1) * params.pageSize;
+    let sql = `
+      SELECT
+        notes.id,
+        notes.user_id,
+        notes.course_id,
+        notes.title,
+        notes.note,
+        notes.created_at,
+        courses.name AS course_name,
+        users.name AS user_name
+      FROM notes
+      JOIN courses ON notes.course_id = courses.id
+      JOIN users ON notes.user_id = users.id
+    `;
+
+    if (where.length > 0) {
+      sql += ` WHERE ${where.join(" AND ")}`;
+    }
+
+    sql += ` ORDER BY notes.${params.sort} ${params.order}`;
+    sql += ` LIMIT ${sqlNumber(params.pageSize)} OFFSET ${sqlNumber(offset)}`;
+
+    return all<NoteWithRelationsRow>(sql);
   }
 
-  getWithRelations() {
-    return new Promise((resolve, reject) => {
-      db.all(
-        `
-        SELECT
-          notes.id,
-          notes.title,
-          notes.note,
-          users.name AS userName,
-          courses.name AS courseName
-        FROM notes
-        JOIN users ON users.id = notes.user_id
-        JOIN courses ON courses.id = notes.course_id
-        `,
-        (err, rows) => {
-          if (err) {
-            console.log("SQL ERROR (relations):", err);
-            reject(err);
-          } else {
-            resolve(rows);
-          }
-        }
-      );
-    });
-  }
-
-  getStats() {
-    return new Promise((resolve, reject) => {
-      db.all(
-        `
-        SELECT course_id, COUNT(*) as total
-        FROM notes
-        GROUP BY course_id
-        `,
-        (err, rows) => {
-          if (err) {
-            console.log("SQL ERROR (stats):", err);
-            reject(err);
-          } else {
-            resolve(rows);
-          }
-        }
-      );
-    });
+  async getStats(): Promise<NoteStatsRow[]> {
+    return all<NoteStatsRow>(`
+      SELECT
+        courses.id AS course_id,
+        courses.name AS course_name,
+        COUNT(notes.id) AS notes_count,
+        COALESCE(SUM(length(notes.note)), 0) AS total_note_length,
+        COALESCE(AVG(length(notes.note)), 0) AS average_note_length
+      FROM courses
+      LEFT JOIN notes ON notes.course_id = courses.id
+      GROUP BY courses.id, courses.name
+      ORDER BY notes_count DESC
+    `);
   }
 }

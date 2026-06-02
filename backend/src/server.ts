@@ -1,17 +1,18 @@
-import app from "./app";
-import { runMigrations } from "./infrastructure/migrate";
-import { seedDatabase } from "./infrastructure/seed";
+import { app } from "./app";
+import { dbPath, initDatabase } from "./infrastructure/db";
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
-const start = async () => {
-  await runMigrations();
-
-  seedDatabase();
+async function bootstrap() {
+  await initDatabase();
 
   app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server started on http://localhost:${PORT}`);
+    console.log(`SQLite database: ${dbPath}`);
   });
-};
+}
 
-start();
+bootstrap().catch((error) => {
+  console.error("Failed to start server", error);
+  process.exit(1);
+});

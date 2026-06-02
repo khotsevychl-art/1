@@ -1,55 +1,87 @@
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
 import { NotesService } from "../services/notes.service";
 
-const service = new NotesService();
+const notesService = new NotesService();
 
-export const getNotes = async (req: Request, res: Response) => {
-  const data = await service.getAll(
-    req.query.courseId as string,
-    req.query.sort as string
-  );
+export class NotesController {
+  async getAll(req: Request, res: Response, next: NextFunction) {
+    try {
+      const items = await notesService.getAll(req.query);
+      res.json({ items });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-  res.json({ data });
-};
+  async getById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await notesService.getById(req.params.id);
+      res.json({ item });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-export const getNote = async (
-  req: Request<{ id: string }>,
-  res: Response,
-  next: NextFunction
-) => {
-  const data = await service.getById(req.params.id);
+  async create(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await notesService.create(req.body);
+      res.status(201).json({ item });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-  if (!data) return next(new Error("NOT_FOUND"));
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await notesService.update(req.params.id, req.body);
+      res.json({ item });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-  res.json({ data });
-};
-export const createNote = async (req: Request, res: Response) => {
-  const data = await service.create(req.body);
-  res.status(201).json({ data });
-};
+  async patch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await notesService.patch(req.params.id, req.body);
+      res.json({ item });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-export const updateNote = async (
-  req: Request<{ id: string }>,
-  res: Response
-) => {
-  const data = await service.update(req.params.id, req.body);
-  res.json({ data });
-};
+  async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      await notesService.delete(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
 
-export const deleteNote = async (
-  req: Request<{ id: string }>,
-  res: Response
-) => {
-  await service.delete(req.params.id);
-  res.status(204).send();
-};
+  async getWithRelations(req: Request, res: Response, next: NextFunction) {
+    try {
+      const items = await notesService.getWithRelations(req.query);
+      res.json({ items });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-export const getNotesWithRelations = async (req: Request, res: Response) => {
-  const data = await service.getWithRelations();
-  res.json({ data });
-};
+  async searchTeachingDemo(req: Request, res: Response, next: NextFunction) {
+    try {
+      const items = await notesService.searchTeachingDemo(req.query);
+      res.json({ items });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-export const getNotesStats = async (req: Request, res: Response) => {
-  const data = await service.getStats();
-  res.json({ data });
-};
+  async getStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const items = await notesService.getStats();
+      res.json({ items });
+    } catch (error) {
+      next(error);
+    }
+  }
+}

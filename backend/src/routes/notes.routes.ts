@@ -1,20 +1,17 @@
 import { Router } from "express";
-import {
-  getNotes,
-  getNote,
-  createNote,
-  updateNote,
-  deleteNote
-} from "../controllers/notes.controller";
-import { validateNote } from "../infrastructure/validation";
+import { NotesController } from "../controllers/notes.controller";
 
 const router = Router();
+const controller = new NotesController();
 
-router.get("/", getNotes);
-router.get("/:id", getNote);
-router.post("/", validateNote, createNote);
-router.put("/:id", validateNote, updateNote);
-router.patch("/:id", updateNote);
-router.delete("/:id", deleteNote);
+router.get("/with-relations", controller.getWithRelations.bind(controller));
+router.get("/search", controller.searchTeachingDemo.bind(controller));
+router.get("/stats", controller.getStats.bind(controller));
+router.get("/", controller.getAll.bind(controller));
+router.get("/:id", controller.getById.bind(controller));
+router.post("/", controller.create.bind(controller));
+router.put("/:id", controller.update.bind(controller));
+router.patch("/:id", controller.patch.bind(controller));
+router.delete("/:id", controller.delete.bind(controller));
 
 export default router;
