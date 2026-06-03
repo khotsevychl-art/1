@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const notes_controller_1 = require("../controllers/notes.controller");
+const validation_1 = require("../infrastructure/validation");
+const asyncHandler_1 = require("../middleware/asyncHandler");
+const router = (0, express_1.Router)();
+router.get("/relations", (0, asyncHandler_1.asyncHandler)(notes_controller_1.getNotesWithRelations));
+router.get("/with-relations", (0, asyncHandler_1.asyncHandler)(notes_controller_1.getNotesWithRelations));
+router.get("/search", (0, asyncHandler_1.asyncHandler)(notes_controller_1.searchTeachingDemo));
+router.get("/stats", (0, asyncHandler_1.asyncHandler)(notes_controller_1.getNotesStats));
+router.get("/", (0, asyncHandler_1.asyncHandler)(notes_controller_1.getNotes));
+router.get("/:id", (0, asyncHandler_1.asyncHandler)(notes_controller_1.getNote));
+router.post("/", validation_1.validateNote, (0, asyncHandler_1.asyncHandler)(notes_controller_1.createNote));
+router.put("/:id", validation_1.validateNote, (0, asyncHandler_1.asyncHandler)(notes_controller_1.updateNote));
+router.patch("/:id", validation_1.validatePartialNote, (0, asyncHandler_1.asyncHandler)(notes_controller_1.updateNote));
+router.delete("/:id", (0, asyncHandler_1.asyncHandler)(notes_controller_1.deleteNote));
+exports.default = router;

@@ -1,0 +1,59 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.validatePartialNote = exports.validateNote = void 0;
+const apiError_1 = require("./apiError");
+const addError = (errors, field, message) => {
+    errors[field] = [...(errors[field] ?? []), message];
+};
+const validateText = (errors, field, value, min, max, required = true) => {
+    if (value === undefined || value === null || String(value).trim() === "") {
+        if (required)
+            addError(errors, field, "Поле обов'язкове");
+        return;
+    }
+    const text = String(value).trim();
+    if (text.length < min)
+        addError(errors, field, `Мінімум ${min} символи`);
+    if (text.length > max)
+        addError(errors, field, `Максимум ${max} символів`);
+};
+const validateNote = (req, res, next) => {
+    const errors = {};
+    validateText(errors, "userId", req.body.userId, 1, 50);
+    validateText(errors, "courseId", req.body.courseId, 1, 50);
+    validateText(errors, "title", req.body.title, 3, 80);
+    validateText(errors, "note", req.body.note, 5, 1000);
+    if (Object.keys(errors).length > 0) {
+        return next(new apiError_1.ApiError(400, "VALIDATION_ERROR", "Invalid data", "Some fields are incorrect", errors));
+    }
+    req.body = {
+        userId: String(req.body.userId).trim(),
+        courseId: String(req.body.courseId).trim(),
+        title: String(req.body.title).trim(),
+        note: String(req.body.note).trim(),
+    };
+    next();
+};
+exports.validateNote = validateNote;
+const validatePartialNote = (req, res, next) => {
+    const errors = {};
+    const allowedFields = ["userId", "courseId", "title", "note"];
+    const dto = {};
+    for (const field of allowedFields) {
+        if (req.body[field] !== undefined)
+            dto[field] = String(req.body[field]).trim();
+    }
+    if (Object.keys(dto).length === 0) {
+        return next(new apiError_1.ApiError(400, "VALIDATION_ERROR", "Invalid data", "Provide at least one field to update", { body: ["Потрібно передати хоча б одне поле"] }));
+    }
+    validateText(errors, "userId", dto.userId, 1, 50, false);
+    validateText(errors, "courseId", dto.courseId, 1, 50, false);
+    validateText(errors, "title", dto.title, 3, 80, false);
+    validateText(errors, "note", dto.note, 5, 1000, false);
+    if (Object.keys(errors).length > 0) {
+        return next(new apiError_1.ApiError(400, "VALIDATION_ERROR", "Invalid data", "Some fields are incorrect", errors));
+    }
+    req.body = dto;
+    next();
+};
+exports.validatePartialNote = validatePartialNote;

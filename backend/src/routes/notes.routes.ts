@@ -1,17 +1,28 @@
 import { Router } from "express";
-import { NotesController } from "../controllers/notes.controller";
+import {
+  createNote,
+  deleteNote,
+  getNote,
+  getNotes,
+  getNotesStats,
+  getNotesWithRelations,
+  searchTeachingDemo,
+  updateNote,
+} from "../controllers/notes.controller";
+import { validateNote, validatePartialNote } from "../infrastructure/validation";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 const router = Router();
-const controller = new NotesController();
 
-router.get("/with-relations", controller.getWithRelations.bind(controller));
-router.get("/search", controller.searchTeachingDemo.bind(controller));
-router.get("/stats", controller.getStats.bind(controller));
-router.get("/", controller.getAll.bind(controller));
-router.get("/:id", controller.getById.bind(controller));
-router.post("/", controller.create.bind(controller));
-router.put("/:id", controller.update.bind(controller));
-router.patch("/:id", controller.patch.bind(controller));
-router.delete("/:id", controller.delete.bind(controller));
+router.get("/relations", asyncHandler(getNotesWithRelations));
+router.get("/with-relations", asyncHandler(getNotesWithRelations));
+router.get("/search", asyncHandler(searchTeachingDemo));
+router.get("/stats", asyncHandler(getNotesStats));
+router.get("/", asyncHandler(getNotes));
+router.get("/:id", asyncHandler(getNote));
+router.post("/", validateNote, asyncHandler(createNote));
+router.put("/:id", validateNote, asyncHandler(updateNote));
+router.patch("/:id", validatePartialNote, asyncHandler(updateNote));
+router.delete("/:id", asyncHandler(deleteNote));
 
 export default router;

@@ -5,39 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Кабінет студента</title>
     <link rel="stylesheet" href="style.css">
-    <script src="app.js" defer></script>
+    <script type="module" src="dist/main.js" defer></script>
 </head>
 <body>
 <div class="container">
     <header>
         <h1>Навчальні нотатки</h1>
+        <div id="notice" class="notice"></div>
     </header>
 
     <main>
-
-    
         <section>
-            <h2>Пошук</h2>
+            <h2>Пошук і фільтри</h2>
             <div class="toolbar">
-                <input type="text" id="searchInput" placeholder="Пошук...">
+                <input type="text" id="searchInput" placeholder="Пошук за назвою або змістом...">
 
-               
                 <select id="courseFilter">
                     <option value="">Усі дисципліни</option>
+                </select>
+
+                <select id="sortBySelect" aria-label="Поле сортування">
+                    <option value="createdAt">Сортувати за датою</option>
+                    <option value="title">Сортувати за назвою</option>
+                    <option value="courseId">Сортувати за курсом</option>
+                </select>
+
+                <select id="sortDirSelect" aria-label="Напрям сортування">
+                    <option value="desc">За спаданням</option>
+                    <option value="asc">За зростанням</option>
                 </select>
             </div>
         </section>
 
-      
         <section>
             <h2 id="formTitle">Додати нотатку</h2>
 
             <form id="noteForm">
-               
                 <input type="hidden" id="noteId">
 
                 <div class="field">
-                    <label>Дисципліна</label>
+                    <label for="userSelect">Користувач</label>
+                    <select id="userSelect" required>
+                        <option value="">Оберіть користувача...</option>
+                    </select>
+                    <p class="error-text" id="noteUserError"></p>
+                </div>
+
+                <div class="field">
+                    <label for="courseSelect">Дисципліна</label>
                     <select id="courseSelect" required>
                         <option value="">Оберіть курс...</option>
                     </select>
@@ -45,43 +60,132 @@
                 </div>
 
                 <div class="field">
-                    <label>Заголовок</label>
-                    <input type="text" id="titleInput">
+                    <label for="titleInput">Заголовок</label>
+                    <input type="text" id="titleInput" minlength="3" maxlength="80" required>
                     <p class="error-text" id="titleError"></p>
                 </div>
 
                 <div class="field">
-                    <label>Зміст</label>
-                    <textarea id="noteText"></textarea>
+                    <label for="noteText">Зміст</label>
+                    <textarea id="noteText" minlength="5" maxlength="1000" required></textarea>
                     <p class="error-text" id="noteError"></p>
                 </div>
 
                 <div class="buttons">
-                    <button type="submit" id="submitBtn">Зберегти</button>
+                    <button type="submit" id="submitBtn">Додати</button>
                     <button type="button" id="resetBtn">Очистити</button>
+                    <button type="button" id="cancelBtn" disabled>Скасувати запит</button>
                 </div>
             </form>
         </section>
 
-        
         <section>
             <h2>Список нотаток</h2>
 
-            <table>
-                <thead>
-                <tr>
-                    <th>Курс</th>
-                    <th>Назва</th>
-                    <th>Зміст</th>
-                    <th>Дата</th>
-                    <th>Дії</th>
-                </tr>
-                </thead>
+            <div class="list-topline">
+                <div id="listStatus" class="status"></div>
+                <div class="buttons small-buttons">
+                    <button type="button" id="refreshBtn">Оновити</button>
+                    <select id="pageSizeSelect" aria-label="Розмір сторінки">
+                        <option value="5">5 на сторінці</option>
+                        <option value="10" selected>10 на сторінці</option>
+                    </select>
+                </div>
+            </div>
 
-                <tbody id="notesTableBody"></tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Користувач</th>
+                        <th>Курс</th>
+                        <th>Назва</th>
+                        <th>Зміст</th>
+                        <th>Пріоритет</th>
+                        <th>Дата</th>
+                        <th>Дії</th>
+                    </tr>
+                    </thead>
+
+                    <tbody id="notesTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="pager">
+                <button type="button" id="prevPageBtn">Назад</button>
+                <span id="pageInfo">Сторінка 1</span>
+                <button type="button" id="nextPageBtn">Далі</button>
+            </div>
         </section>
 
+        <section>
+            <h2>Деталі нотатки</h2>
+            <div id="detailsPanel" class="details-panel">
+                Оберіть «Деталі» біля нотатки.
+            </div>
+        </section>
+
+        <section>
+            <div class="section-head">
+                <h2>Нотатки з користувачем і курсом</h2>
+                <button type="button" id="refreshRelationsBtn">Оновити зв'язки</button>
+            </div>
+            <div id="relationsStatus" class="status"></div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Назва</th>
+                        <th>Зміст</th>
+                        <th>Користувач</th>
+                        <th>Курс</th>
+                    </tr>
+                    </thead>
+                    <tbody id="relationsTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-head">
+                <h2>Статистика нотаток</h2>
+                <button type="button" id="refreshStatsBtn">Оновити статистику</button>
+            </div>
+            <div id="statsStatus" class="status"></div>
+            <div class="table-container small-table">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Курс</th>
+                        <th>Кількість нотаток</th>
+                    </tr>
+                    </thead>
+                    <tbody id="statsTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-head">
+                <h2>Користувачі</h2>
+                <button type="button" id="refreshUsersBtn">Оновити користувачів</button>
+            </div>
+
+            <form id="userForm" class="inline-form">
+                <div class="field inline-field">
+                    <label for="userNameInput">Ім'я користувача</label>
+                    <input type="text" id="userNameInput" minlength="2" maxlength="60" required>
+                    <p class="error-text" id="userError"></p>
+                </div>
+                <div class="user-form-actions">
+                    <button type="submit" id="createUserBtn">Створити користувача</button>
+                    <button type="button" id="cancelUserEditBtn" hidden>Скасувати</button>
+                </div>
+            </form>
+
+            <div id="usersStatus" class="status"></div>
+            <div id="usersList" class="users-list"></div>
+        </section>
     </main>
 </div>
 </body>

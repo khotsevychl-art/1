@@ -1,60 +1,34 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import { CoursesService } from "../services/courses.service";
 
-const coursesService = new CoursesService();
+const service = new CoursesService();
 
-export class CoursesController {
-  async getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const items = await coursesService.getAll(req.query);
-      res.json({ items });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const getCourses = async (req: Request, res: Response) => {
+  const data = await service.getAll(req.query);
+  res.json({ data });
+};
 
-  async getById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const item = await coursesService.getById(req.params.id);
-      res.json({ item });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const getCourse = async (req: Request<{ id: string }>, res: Response) => {
+  const data = await service.getById(req.params.id);
+  res.json({ data });
+};
 
-  async create(req: Request, res: Response, next: NextFunction) {
-    try {
-      const item = await coursesService.create(req.body);
-      res.status(201).json({ item });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const createCourse = async (req: Request, res: Response) => {
+  const data = await service.create(req.body);
+  res.status(201).json({ data });
+};
 
-  async update(req: Request, res: Response, next: NextFunction) {
-    try {
-      const item = await coursesService.update(req.params.id, req.body);
-      res.json({ item });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const updateCourse = async (req: Request<{ id: string }>, res: Response) => {
+  const data = await service.update(req.params.id, req.body);
+  res.json({ data });
+};
 
-  async patch(req: Request, res: Response, next: NextFunction) {
-    try {
-      const item = await coursesService.patch(req.params.id, req.body);
-      res.json({ item });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const patchCourse = async (req: Request<{ id: string }>, res: Response) => {
+  const data = await service.patch(req.params.id, req.body);
+  res.json({ data });
+};
 
-  async delete(req: Request, res: Response, next: NextFunction) {
-    try {
-      await coursesService.delete(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      next(error);
-    }
-  }
-}
+export const deleteCourse = async (req: Request<{ id: string }>, res: Response) => {
+  await service.delete(req.params.id);
+  res.status(204).send();
+};

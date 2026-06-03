@@ -1,87 +1,64 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import { NotesService } from "../services/notes.service";
+import { NotesQueryDto } from "../domain/note.dto";
 
-const notesService = new NotesService();
+const service = new NotesService();
 
-export class NotesController {
-  async getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const items = await notesService.getAll(req.query);
-      res.json({ items });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const getNotes = async (req: Request, res: Response) => {
+  const query: NotesQueryDto & Record<string, any> = {
+    courseId: req.query.courseId as string | undefined,
+    userId: req.query.userId as string | undefined,
+    search: (req.query.search ?? req.query.q) as string | undefined,
+    sortBy: (req.query.sortBy ?? req.query.sort) as NotesQueryDto["sortBy"],
+    sortDir: (req.query.sortDir ?? req.query.order) as NotesQueryDto["sortDir"],
+    page: Number(req.query.page ?? 1),
+    pageSize: Number(req.query.pageSize ?? 10),
+  };
 
-  async getById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const item = await notesService.getById(req.params.id);
-      res.json({ item });
-    } catch (error) {
-      next(error);
-    }
-  }
+  const result = await service.getAll(query);
 
-  async create(req: Request, res: Response, next: NextFunction) {
-    try {
-      const item = await notesService.create(req.body);
-      res.status(201).json({ item });
-    } catch (error) {
-      next(error);
-    }
-  }
+  res.json({
+    data: result.items,
+    items: result.items,
+    meta: {
+      total: result.total,
+      page: query.page ?? 1,
+      pageSize: query.pageSize ?? 10,
+    },
+  });
+};
 
-  async update(req: Request, res: Response, next: NextFunction) {
-    try {
-      const item = await notesService.update(req.params.id, req.body);
-      res.json({ item });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const getNote = async (req: Request<{ id: string }>, res: Response) => {
+  const data = await service.getById(req.params.id);
+  res.json({ data, item: data });
+};
 
-  async patch(req: Request, res: Response, next: NextFunction) {
-    try {
-      const item = await notesService.patch(req.params.id, req.body);
-      res.json({ item });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const createNote = async (req: Request, res: Response) => {
+  const data = await service.create(req.body);
+  res.status(201).json({ data, item: data });
+};
 
-  async delete(req: Request, res: Response, next: NextFunction) {
-    try {
-      await notesService.delete(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      next(error);
-    }
-  }
+export const updateNote = async (req: Request<{ id: string }>, res: Response) => {
+  const data = await service.update(req.params.id, req.body);
+  res.json({ data, item: data });
+};
 
-  async getWithRelations(req: Request, res: Response, next: NextFunction) {
-    try {
-      const items = await notesService.getWithRelations(req.query);
-      res.json({ items });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const deleteNote = async (req: Request<{ id: string }>, res: Response) => {
+  await service.delete(req.params.id);
+  res.status(204).send();
+};
 
-  async searchTeachingDemo(req: Request, res: Response, next: NextFunction) {
-    try {
-      const items = await notesService.searchTeachingDemo(req.query);
-      res.json({ items });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const getNotesWithRelations = async (req: Request, res: Response) => {
+  const data = await service.getWithRelations(req.query);
+  res.json({ data, items: data });
+};
 
-  async getStats(req: Request, res: Response, next: NextFunction) {
-    try {
-      const items = await notesService.getStats();
-      res.json({ items });
-    } catch (error) {
-      next(error);
-    }
-  }
-}
+export const searchTeachingDemo = async (req: Request, res: Response) => {
+  const data = await service.searchTeachingDemo(req.query);
+  res.json({ data, items: data });
+};
+
+export const getNotesStats = async (req: Request, res: Response) => {
+  const data = await service.getStats();
+  res.json({ data, items: data });
+};

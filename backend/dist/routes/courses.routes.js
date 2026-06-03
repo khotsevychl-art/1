@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const courses_controller_1 = require("../controllers/courses.controller");
+const asyncHandler_1 = require("../middleware/asyncHandler");
+const router = (0, express_1.Router)();
+router.get("/", (0, asyncHandler_1.asyncHandler)(courses_controller_1.getCourses));
+router.get("/:id", (0, asyncHandler_1.asyncHandler)(courses_controller_1.getCourse));
+router.post("/", (0, asyncHandler_1.asyncHandler)(courses_controller_1.createCourse));
+router.put("/:id", (0, asyncHandler_1.asyncHandler)(courses_controller_1.updateCourse));
+router.patch("/:id", (0, asyncHandler_1.asyncHandler)(courses_controller_1.patchCourse));
+router.delete("/:id", (0, asyncHandler_1.asyncHandler)(courses_controller_1.deleteCourse));
+exports.default = router;

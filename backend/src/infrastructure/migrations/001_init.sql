@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS courses (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS notes (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  course_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  note TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (course_id) REFERENCES courses(id)
+);
