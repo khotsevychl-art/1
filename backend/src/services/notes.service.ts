@@ -21,29 +21,31 @@ async function ensureRelations(dto: Partial<CreateNoteDto>) {
 }
 
 export class NotesService {
-  getAll(query: NotesQueryDto & Record<string, any>) {
-    return store.getAll(query);
+  getAll(query: NotesQueryDto & Record<string, any>, currentUserId: string) {
+    return store.getAll({ ...query, userId: currentUserId });
   }
 
-  async getById(id: string) {
-    const note = await store.getById(id);
-    if (!note) throw new ApiError(404, "NOTE_NOT_FOUND", "Note not found", `Note with id ${id} does not exist`);
+  async getById(id: string, currentUserId: string) {
+    const note = await store.getByIdForUser(id, currentUserId);
+    if (!note) throw new ApiError(404, "NOTE_NOT_FOUND", "Note not found", "Note does not exist or belongs to another user");
     return note;
   }
 
-  async create(dto: CreateNoteDto) {
-    await ensureRelations(dto);
+  async create(dto: CreateNoteDto, currentUserId: string) {
+    const safeDto = { ...dto, userId: currentUserId };
+    await ensureRelations(safeDto);
 
-    const exists = await store.existsByContent(dto.note);
+    const exists = await store.existsByContent(safeDto.note);
     if (exists) {
       throw new ApiError(409, "DUPLICATE_NOTE", "Note with this content already exists", "Change note text and try again");
     }
 
-    return store.create(dto);
+    return store.create(safeDto, currentUserId);
   }
 
-  async update(id: string, dto: UpdateNoteDto) {
-    await ensureRelations(dto);
+  async update(id: string, dto: UpdateNoteDto, currentUserId: string) {
+    const safeDto = { ...dto, userId: currentUserId };
+    await ensureRelations(safeDto);
 
     if (dto.note) {
       const exists = await store.existsByContent(dto.note, id);
@@ -52,25 +54,25 @@ export class NotesService {
       }
     }
 
-    const note = await store.update(id, dto);
-    if (!note) throw new ApiError(404, "NOTE_NOT_FOUND", "Note not found", `Note with id ${id} does not exist`);
+    const note = await store.update(id, safeDto, currentUserId);
+    if (!note) throw new ApiError(404, "NOTE_NOT_FOUND", "Note not found", "Note does not exist or belongs to another user");
     return note;
   }
 
-  async delete(id: string) {
-    const deleted = await store.delete(id);
-    if (!deleted) throw new ApiError(404, "NOTE_NOT_FOUND", "Note not found", `Note with id ${id} does not exist`);
+  async delete(id: string, currentUserId: string) {
+    const deleted = await store.delete(id, currentUserId);
+    if (!deleted) throw new ApiError(404, "NOTE_NOT_FOUND", "Note not found", "Note does not exist or belongs to another user");
   }
 
-  getWithRelations(query: Record<string, any> = {}) {
-    return store.getWithRelations(query);
+  getWithRelations(currentUserId: string, query: Record<string, any> = {}) {
+    return store.getWithRelations({ ...query, userId: currentUserId });
   }
 
-  searchTeachingDemo(query: Record<string, any> = {}) {
-    return store.getWithRelations({ ...query, search: query.search ?? query.q });
+  searchTeachingDemo(currentUserId: string, query: Record<string, any> = {}) {
+    return store.getWithRelations({ ...query, userId: currentUserId, search: query.search ?? query.q });
   }
 
-  getStats() {
-    return store.getStats();
+  getStats(currentUserId: string) {
+    return store.getStats(currentUserId);
   }
 }

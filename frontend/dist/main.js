@@ -1,4 +1,4 @@
-import { cancelActiveRequest, clearListCache, create, createUser, updateUser, getById, getCourses, getList, getNotesStats, getNotesWithRelations, getUsers, remove, update, } from "./apiClient.js";
+import { cancelActiveRequest, clearListCache, create, createUser, updateUser, getById, getCourses, getDemoUserId, getList, getNotesStats, getNotesWithRelations, getUsers, remove, setDemoUserId, update, } from "./apiClient.js";
 import { clearErrors, elements, fillCourseSelects, fillUserSelect, renderDetails, renderListStatus, renderNotes, renderRelations, renderStats, renderStatus, renderUsers, setFormEnabled, setUserFormEnabled, showFieldErrors, showNotice, updatePager, } from "./ui.js";
 let editId = null;
 let currentPage = 1;
@@ -122,7 +122,13 @@ async function loadUsers() {
     try {
         const users = await getUsers();
         usersState = users;
+        const storedUser = getDemoUserId();
+        const selectedUser = users.find((user) => user.id === storedUser)?.id ?? users[0]?.id;
+        if (selectedUser)
+            setDemoUserId(selectedUser);
         fillUserSelect(usersState);
+        if (selectedUser)
+            elements.userSelect.value = selectedUser;
         renderUsers(users);
         renderStatus(elements.usersStatus, users.length ? "success" : "empty", "Користувачів немає");
     }
@@ -139,6 +145,7 @@ function resetForm() {
     elements.submitBtn.textContent = "Додати";
     elements.formTitle.textContent = "Додати нотатку";
     elements.noteForm.reset();
+    elements.userSelect.value = getDemoUserId();
     clearErrors();
 }
 function resetUserForm() {
@@ -161,6 +168,7 @@ elements.noteForm.addEventListener("submit", async (e) => {
     const dto = readForm();
     if (!validate(dto))
         return;
+    setDemoUserId(dto.userId);
     setFormEnabled(false);
     try {
         if (editId) {
@@ -203,7 +211,8 @@ elements.userForm.addEventListener("submit", async (e) => {
             showNotice("Ім'я користувача оновлено", "success");
         }
         else {
-            await createUser({ name });
+            const createdUser = await createUser({ name });
+            setDemoUserId(createdUser.id);
             showNotice("Користувача створено. Тепер його можна обрати у формі нотатки", "success");
         }
         resetUserForm();
@@ -284,6 +293,15 @@ elements.searchInput.addEventListener("input", () => {
 elements.courseFilter.addEventListener("change", () => {
     currentPage = 1;
     loadList();
+});
+elements.userSelect.addEventListener("change", async () => {
+    const id = elements.userSelect.value;
+    if (!id)
+        return;
+    setDemoUserId(id);
+    currentPage = 1;
+    await loadList(true);
+    await Promise.all([loadRelations(), loadStats()]);
 });
 elements.sortBySelect.addEventListener("change", () => loadList());
 elements.sortDirSelect.addEventListener("change", () => loadList());

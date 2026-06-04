@@ -8,7 +8,7 @@ const allowedOrigins = new Set([
     "http://127.0.0.1:5173",
 ]);
 const allowedMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS";
-const allowedHeaders = "Content-Type,Authorization";
+const allowedHeaders = "Content-Type,Authorization,X-Demo-UserId";
 const corsMiddleware = (req, res, next) => {
     const origin = req.headers.origin;
     if (!origin || allowedOrigins.has(origin)) {
@@ -28,7 +28,7 @@ const corsMiddleware = (req, res, next) => {
             code: "CORS_ORIGIN_DENIED",
             title: "CORS origin is not allowed",
             message: "CORS origin is not allowed",
-            detail: `Origin ${origin} is not in whitelist`,
+            detail: "This frontend origin is not allowed",
         });
     }
     next();

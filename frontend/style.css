@@ -27,7 +27,6 @@ h1, h2 {
 h1 {
     text-align: center;
     background: linear-gradient(90deg, #4da3ff, #ff7ac6);
-    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }

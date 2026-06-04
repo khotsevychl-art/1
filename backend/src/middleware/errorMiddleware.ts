@@ -7,7 +7,7 @@ export const notFound = (req: Request, res: Response) => {
     code: "ROUTE_NOT_FOUND",
     title: "Route not found",
     message: "Route not found",
-    detail: `${req.method} ${req.originalUrl} does not exist`,
+    detail: "The requested API route does not exist",
   });
 };
 
@@ -17,7 +17,7 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  console.log("API ERROR:", err);
+  console.error("API ERROR:", err);
 
   if (err instanceof ApiError) {
     return res.status(err.status).json({
@@ -35,6 +35,6 @@ export const errorHandler = (
     code: "INTERNAL_ERROR",
     title: "Server error",
     message: "Server error",
-    detail: "Unexpected backend error. Check backend console for details.",
+    detail: process.env.NODE_ENV === "production" ? undefined : "Unexpected backend error. Check backend console for details.",
   });
 };

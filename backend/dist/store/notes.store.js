@@ -58,6 +58,10 @@ class NotesStore {
         const row = await (0, db_1.get)("SELECT * FROM notes WHERE id = ?", [id]);
         return row ? mapNote(row) : null;
     }
+    async getByIdForUser(id, ownerUserId) {
+        const row = await (0, db_1.get)("SELECT * FROM notes WHERE id = ? AND user_id = ?", [id, ownerUserId]);
+        return row ? mapNote(row) : null;
+    }
     async existsByContent(note, exceptId) {
         const row = exceptId
             ? await (0, db_1.get)("SELECT id FROM notes WHERE note = ? AND id <> ? LIMIT 1", [note, exceptId])
@@ -72,34 +76,47 @@ class NotesStore {
         const row = await (0, db_1.get)("SELECT COUNT(*) AS count FROM notes WHERE user_id = ?", [userId]);
         return row?.count ?? 0;
     }
-    async create(note) {
+    async create(note, ownerUserId) {
         const id = (0, crypto_1.randomUUID)();
         const createdAt = new Date().toISOString();
         await (0, db_1.run)(`INSERT INTO notes(id, user_id, course_id, title, note, created_at)
-       VALUES(?, ?, ?, ?, ?, ?)`, [id, note.userId, note.courseId, note.title, note.note, createdAt]);
-        return { id, userId: note.userId, courseId: note.courseId, title: note.title, note: note.note, createdAt, priority: "normal" };
+       VALUES(?, ?, ?, ?, ?, ?)`, [id, ownerUserId ?? note.userId, note.courseId, note.title, note.note, createdAt]);
+        const userId = ownerUserId ?? note.userId;
+        return { id, userId, courseId: note.courseId, title: note.title, note: note.note, createdAt, priority: "normal" };
     }
-    async update(id, note) {
-        const current = await this.getById(id);
+    async update(id, note, ownerUserId) {
+        const current = ownerUserId ? await this.getByIdForUser(id, ownerUserId) : await this.getById(id);
         if (!current)
             return null;
         const next = {
-            userId: note.userId ?? current.userId,
+            userId: ownerUserId ?? note.userId ?? current.userId,
             courseId: note.courseId ?? current.courseId,
             title: note.title ?? current.title,
             note: note.note ?? current.note,
         };
-        await (0, db_1.run)("UPDATE notes SET user_id = ?, course_id = ?, title = ?, note = ? WHERE id = ?", [
-            next.userId,
-            next.courseId,
-            next.title,
-            next.note,
-            id,
-        ]);
+        const result = ownerUserId
+            ? await (0, db_1.run)("UPDATE notes SET course_id = ?, title = ?, note = ? WHERE id = ? AND user_id = ?", [
+                next.courseId,
+                next.title,
+                next.note,
+                id,
+                ownerUserId,
+            ])
+            : await (0, db_1.run)("UPDATE notes SET user_id = ?, course_id = ?, title = ?, note = ? WHERE id = ?", [
+                next.userId,
+                next.courseId,
+                next.title,
+                next.note,
+                id,
+            ]);
+        if (result.changes === 0)
+            return null;
         return { ...current, ...next };
     }
-    async delete(id) {
-        const result = await (0, db_1.run)("DELETE FROM notes WHERE id = ?", [id]);
+    async delete(id, ownerUserId) {
+        const result = ownerUserId
+            ? await (0, db_1.run)("DELETE FROM notes WHERE id = ? AND user_id = ?", [id, ownerUserId])
+            : await (0, db_1.run)("DELETE FROM notes WHERE id = ?", [id]);
         return result.changes > 0;
     }
     async getWithRelations(query = {}) {
@@ -136,7 +153,9 @@ class NotesStore {
        ORDER BY notes.${params.sortColumn} ${params.sortDir}
        LIMIT ? OFFSET ?`, [...values, params.pageSize, offset]);
     }
-    async getStats() {
+    async getStats(ownerUserId) {
+        const userFilter = ownerUserId ? " AND notes.user_id = ?" : "";
+        const params = ownerUserId ? [ownerUserId] : [];
         return (0, db_1.all)(`SELECT
         courses.id AS courseId,
         courses.name AS courseName,
@@ -145,9 +164,9 @@ class NotesStore {
         COALESCE(SUM(length(notes.note)), 0) AS totalNoteLength,
         COALESCE(AVG(length(notes.note)), 0) AS averageNoteLength
        FROM courses
-       LEFT JOIN notes ON notes.course_id = courses.id
+       LEFT JOIN notes ON notes.course_id = courses.id${userFilter}
        GROUP BY courses.id, courses.name
-       ORDER BY notesCount DESC`);
+       ORDER BY notesCount DESC`, params);
     }
 }
 exports.NotesStore = NotesStore;

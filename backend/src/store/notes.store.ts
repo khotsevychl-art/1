@@ -98,6 +98,11 @@ export class NotesStore {
     return row ? mapNote(row) : null;
   }
 
+  async getByIdForUser(id: string, ownerUserId: string): Promise<NoteResponseDto | null> {
+    const row = await get<NoteRow>("SELECT * FROM notes WHERE id = ? AND user_id = ?", [id, ownerUserId]);
+    return row ? mapNote(row) : null;
+  }
+
   async existsByContent(note: string, exceptId?: string): Promise<boolean> {
     const row = exceptId
       ? await get<{ id: string }>("SELECT id FROM notes WHERE note = ? AND id <> ? LIMIT 1", [note, exceptId])
@@ -115,43 +120,56 @@ export class NotesStore {
     return row?.count ?? 0;
   }
 
-  async create(note: CreateNoteDto): Promise<NoteResponseDto> {
+  async create(note: CreateNoteDto, ownerUserId?: string): Promise<NoteResponseDto> {
     const id = randomUUID();
     const createdAt = new Date().toISOString();
 
     await run(
       `INSERT INTO notes(id, user_id, course_id, title, note, created_at)
        VALUES(?, ?, ?, ?, ?, ?)`,
-      [id, note.userId, note.courseId, note.title, note.note, createdAt]
+      [id, ownerUserId ?? note.userId, note.courseId, note.title, note.note, createdAt]
     );
 
-    return { id, userId: note.userId, courseId: note.courseId, title: note.title, note: note.note, createdAt, priority: "normal" };
+    const userId = ownerUserId ?? note.userId;
+    return { id, userId, courseId: note.courseId, title: note.title, note: note.note, createdAt, priority: "normal" };
   }
 
-  async update(id: string, note: UpdateNoteDto): Promise<NoteResponseDto | null> {
-    const current = await this.getById(id);
+  async update(id: string, note: UpdateNoteDto, ownerUserId?: string): Promise<NoteResponseDto | null> {
+    const current = ownerUserId ? await this.getByIdForUser(id, ownerUserId) : await this.getById(id);
     if (!current) return null;
 
     const next = {
-      userId: note.userId ?? current.userId,
+      userId: ownerUserId ?? note.userId ?? current.userId,
       courseId: note.courseId ?? current.courseId,
       title: note.title ?? current.title,
       note: note.note ?? current.note,
     };
 
-    await run("UPDATE notes SET user_id = ?, course_id = ?, title = ?, note = ? WHERE id = ?", [
-      next.userId,
-      next.courseId,
-      next.title,
-      next.note,
-      id,
-    ]);
+    const result = ownerUserId
+      ? await run("UPDATE notes SET course_id = ?, title = ?, note = ? WHERE id = ? AND user_id = ?", [
+          next.courseId,
+          next.title,
+          next.note,
+          id,
+          ownerUserId,
+        ])
+      : await run("UPDATE notes SET user_id = ?, course_id = ?, title = ?, note = ? WHERE id = ?", [
+          next.userId,
+          next.courseId,
+          next.title,
+          next.note,
+          id,
+        ]);
+
+    if (result.changes === 0) return null;
 
     return { ...current, ...next };
   }
 
-  async delete(id: string): Promise<boolean> {
-    const result = await run("DELETE FROM notes WHERE id = ?", [id]);
+  async delete(id: string, ownerUserId?: string): Promise<boolean> {
+    const result = ownerUserId
+      ? await run("DELETE FROM notes WHERE id = ? AND user_id = ?", [id, ownerUserId])
+      : await run("DELETE FROM notes WHERE id = ?", [id]);
     return result.changes > 0;
   }
 
@@ -196,7 +214,10 @@ export class NotesStore {
     );
   }
 
-  async getStats(): Promise<NoteStatsRow[]> {
+  async getStats(ownerUserId?: string): Promise<NoteStatsRow[]> {
+    const userFilter = ownerUserId ? " AND notes.user_id = ?" : "";
+    const params = ownerUserId ? [ownerUserId] : [];
+
     return all<NoteStatsRow>(
       `SELECT
         courses.id AS courseId,
@@ -206,9 +227,10 @@ export class NotesStore {
         COALESCE(SUM(length(notes.note)), 0) AS totalNoteLength,
         COALESCE(AVG(length(notes.note)), 0) AS averageNoteLength
        FROM courses
-       LEFT JOIN notes ON notes.course_id = courses.id
+       LEFT JOIN notes ON notes.course_id = courses.id${userFilter}
        GROUP BY courses.id, courses.name
-       ORDER BY notesCount DESC`
+       ORDER BY notesCount DESC`,
+      params
     );
   }
 }

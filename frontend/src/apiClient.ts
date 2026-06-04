@@ -16,9 +16,19 @@ import type {
 } from "./dtos.js";
 
 const listCache = new Map<string, ApiListResponse<NoteDto>>();
+const DEMO_USER_STORAGE_KEY = "demoUserId";
 let activeController: AbortController | null = null;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export function getDemoUserId() {
+  return window.localStorage.getItem(DEMO_USER_STORAGE_KEY) || "1";
+}
+
+export function setDemoUserId(userId: string) {
+  window.localStorage.setItem(DEMO_USER_STORAGE_KEY, userId);
+  listCache.clear();
+}
 
 function buildQuery(params: NoteListQuery) {
   const query = new URLSearchParams();
@@ -69,6 +79,7 @@ async function request<T>(
       const response = await fetch(url, {
         ...options,
         headers: {
+          "X-Demo-UserId": getDemoUserId(),
           ...(options.body ? { "Content-Type": "application/json" } : {}),
           ...(options.headers ?? {}),
         },

@@ -5,13 +5,15 @@ import notesRoutes from "./routes/notes.routes";
 import coursesRoutes from "./routes/courses.routes";
 import { corsMiddleware } from "./infrastructure/cors";
 import { errorHandler, notFound } from "./middleware/errorMiddleware";
+import { securityHeaders } from "./middleware/securityHeaders";
 
 const app = express();
 
+app.use(securityHeaders);
 app.use(corsMiddleware);
 app.use(express.json());
 
-app.get("/api/v1/health", (req, res) => {
+app.get("/api/v1/health", (req: any, res: any) => {
   res.json({ data: { status: "ok", apiVersion: "v1" } });
 });
 

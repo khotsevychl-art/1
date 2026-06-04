@@ -30,7 +30,8 @@ const validateText = (
 export const validateNote = (req: Request, res: Response, next: NextFunction) => {
   const errors: Record<string, string[]> = {};
 
-  validateText(errors, "userId", req.body.userId, 1, 50);
+  // userId is not trusted from body: owner is taken from X-Demo-UserId on backend.
+  validateText(errors, "userId", req.body.userId, 1, 50, false);
   validateText(errors, "courseId", req.body.courseId, 1, 50);
   validateText(errors, "title", req.body.title, 3, 80);
   validateText(errors, "note", req.body.note, 5, 1000);
@@ -48,7 +49,7 @@ export const validateNote = (req: Request, res: Response, next: NextFunction) =>
   }
 
   req.body = {
-    userId: String(req.body.userId).trim(),
+    ...(req.body.userId !== undefined ? { userId: String(req.body.userId).trim() } : {}),
     courseId: String(req.body.courseId).trim(),
     title: String(req.body.title).trim(),
     note: String(req.body.note).trim(),
@@ -63,7 +64,7 @@ export const validatePartialNote = (
   next: NextFunction
 ) => {
   const errors: Record<string, string[]> = {};
-  const allowedFields = ["userId", "courseId", "title", "note"];
+  const allowedFields = ["userId", "courseId", "title", "note"]; // userId is accepted for compatibility, but backend does not trust it for ownership
   const dto: Record<string, string> = {};
 
   for (const field of allowedFields) {

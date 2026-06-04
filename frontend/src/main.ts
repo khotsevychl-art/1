@@ -6,11 +6,13 @@ import {
   updateUser,
   getById,
   getCourses,
+  getDemoUserId,
   getList,
   getNotesStats,
   getNotesWithRelations,
   getUsers,
   remove,
+  setDemoUserId,
   update,
 } from "./apiClient.js";
 import type { ApiError, CourseDto, CreateNoteDto, NoteDto, UserDto } from "./dtos.js";
@@ -168,7 +170,11 @@ async function loadUsers() {
   try {
     const users = await getUsers();
     usersState = users;
+    const storedUser = getDemoUserId();
+    const selectedUser = users.find((user) => user.id === storedUser)?.id ?? users[0]?.id;
+    if (selectedUser) setDemoUserId(selectedUser);
     fillUserSelect(usersState);
+    if (selectedUser) elements.userSelect.value = selectedUser;
     renderUsers(users);
     renderStatus(elements.usersStatus, users.length ? "success" : "empty", "Користувачів немає");
   } catch (e) {
@@ -185,6 +191,7 @@ function resetForm() {
   elements.submitBtn.textContent = "Додати";
   elements.formTitle.textContent = "Додати нотатку";
   elements.noteForm.reset();
+  elements.userSelect.value = getDemoUserId();
   clearErrors();
 }
 
@@ -210,6 +217,7 @@ elements.noteForm.addEventListener("submit", async (e) => {
 
   const dto = readForm();
   if (!validate(dto)) return;
+  setDemoUserId(dto.userId);
 
   setFormEnabled(false);
 
@@ -257,7 +265,8 @@ elements.userForm.addEventListener("submit", async (e) => {
       await updateUser(editUserId, { name });
       showNotice("Ім'я користувача оновлено", "success");
     } else {
-      await createUser({ name });
+      const createdUser = await createUser({ name });
+      setDemoUserId(createdUser.id);
       showNotice("Користувача створено. Тепер його можна обрати у формі нотатки", "success");
     }
 
@@ -345,6 +354,15 @@ elements.searchInput.addEventListener("input", () => {
 elements.courseFilter.addEventListener("change", () => {
   currentPage = 1;
   loadList();
+});
+
+elements.userSelect.addEventListener("change", async () => {
+  const id = elements.userSelect.value;
+  if (!id) return;
+  setDemoUserId(id);
+  currentPage = 1;
+  await loadList(true);
+  await Promise.all([loadRelations(), loadStats()]);
 });
 
 elements.sortBySelect.addEventListener("change", () => loadList());

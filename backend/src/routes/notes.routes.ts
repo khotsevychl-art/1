@@ -11,8 +11,11 @@ import {
 } from "../controllers/notes.controller";
 import { validateNote, validatePartialNote } from "../infrastructure/validation";
 import { asyncHandler } from "../middleware/asyncHandler";
+import { demoAuth } from "../middleware/demoAuth";
 
 const router = Router();
+
+router.use(asyncHandler(demoAuth));
 
 router.get("/relations", asyncHandler(getNotesWithRelations));
 router.get("/with-relations", asyncHandler(getNotesWithRelations));

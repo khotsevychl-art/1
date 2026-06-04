@@ -9,7 +9,9 @@ const notes_routes_1 = __importDefault(require("./routes/notes.routes"));
 const courses_routes_1 = __importDefault(require("./routes/courses.routes"));
 const cors_1 = require("./infrastructure/cors");
 const errorMiddleware_1 = require("./middleware/errorMiddleware");
+const securityHeaders_1 = require("./middleware/securityHeaders");
 const app = (0, express_1.default)();
+app.use(securityHeaders_1.securityHeaders);
 app.use(cors_1.corsMiddleware);
 app.use(express_1.default.json());
 app.get("/api/v1/health", (req, res) => {

@@ -1,7 +1,15 @@
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from "./config.js";
 const listCache = new Map();
+const DEMO_USER_STORAGE_KEY = "demoUserId";
 let activeController = null;
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export function getDemoUserId() {
+    return window.localStorage.getItem(DEMO_USER_STORAGE_KEY) || "1";
+}
+export function setDemoUserId(userId) {
+    window.localStorage.setItem(DEMO_USER_STORAGE_KEY, userId);
+    listCache.clear();
+}
 function buildQuery(params) {
     const query = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -40,6 +48,7 @@ async function request(path, options = {}, retrySafe = false) {
             const response = await fetch(url, {
                 ...options,
                 headers: {
+                    "X-Demo-UserId": getDemoUserId(),
                     ...(options.body ? { "Content-Type": "application/json" } : {}),
                     ...(options.headers ?? {}),
                 },

@@ -1,0 +1,84 @@
+### 1. Health + security headers
+GET http://localhost:3000/api/v1/health
+
+### Очікувано в headers:
+### X-Content-Type-Options: nosniff
+### X-Frame-Options: DENY
+### Referrer-Policy: no-referrer
+### Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+
+### 2. Немає X-Demo-UserId -> 401
+GET http://localhost:3000/api/v1/notes
+
+
+### 3. Невідомий користувач -> 401
+GET http://localhost:3000/api/v1/notes
+X-Demo-UserId: unknown-user
+
+
+### 4. Нормальний список нотаток user 1 -> 200, тільки свої записи
+GET http://localhost:3000/api/v1/notes
+X-Demo-UserId: 1
+
+
+### 5. SQLi PoC: ін'єкція має сприйматися як текст, не як SQL-код
+GET http://localhost:3000/api/v1/notes?search=' OR '1'='1
+X-Demo-UserId: 1
+
+
+### 6. Invalid sortBy -> 400, а не SQL-помилка
+GET http://localhost:3000/api/v1/notes?sortBy=title;DROP TABLE notes
+X-Demo-UserId: 1
+
+
+### 7. Створення нотатки з XSS payload. Має зберегтися як текст, UI не виконує JS.
+POST http://localhost:3000/api/v1/notes
+X-Demo-UserId: 1
+Content-Type: application/json
+
+{
+  "courseId": "3",
+  "title": "XSS test",
+  "note": "<img src=x onerror=alert('xss')>"
+}
+
+
+### 8. User 1 читає свою демо-нотатку -> 200
+GET http://localhost:3000/api/v1/notes/demo-note-user-1
+X-Demo-UserId: 1
+
+
+### 9. User 1 читає чужу демо-нотатку user 2 -> 404
+GET http://localhost:3000/api/v1/notes/demo-note-user-2
+X-Demo-UserId: 1
+
+
+### 10. User 1 пробує змінити чужу нотатку user 2 -> 404
+PATCH http://localhost:3000/api/v1/notes/demo-note-user-2
+X-Demo-UserId: 1
+Content-Type: application/json
+
+{
+  "title": "Hacked title"
+}
+
+
+### 11. User 1 пробує видалити чужу нотатку user 2 -> 404
+DELETE http://localhost:3000/api/v1/notes/demo-note-user-2
+X-Demo-UserId: 1
+
+
+### 12. User 2 читає свою демо-нотатку -> 200
+GET http://localhost:3000/api/v1/notes/demo-note-user-2
+X-Demo-UserId: 2
+
+
+### 13. Relations теж фільтруються за поточним користувачем
+GET http://localhost:3000/api/v1/notes/relations
+X-Demo-UserId: 1
+
+
+### 14. Stats теж рахуються для поточного користувача
+GET http://localhost:3000/api/v1/notes/stats
+X-Demo-UserId: 1

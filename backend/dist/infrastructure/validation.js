@@ -19,7 +19,8 @@ const validateText = (errors, field, value, min, max, required = true) => {
 };
 const validateNote = (req, res, next) => {
     const errors = {};
-    validateText(errors, "userId", req.body.userId, 1, 50);
+    // userId is not trusted from body: owner is taken from X-Demo-UserId on backend.
+    validateText(errors, "userId", req.body.userId, 1, 50, false);
     validateText(errors, "courseId", req.body.courseId, 1, 50);
     validateText(errors, "title", req.body.title, 3, 80);
     validateText(errors, "note", req.body.note, 5, 1000);
@@ -27,7 +28,7 @@ const validateNote = (req, res, next) => {
         return next(new apiError_1.ApiError(400, "VALIDATION_ERROR", "Invalid data", "Some fields are incorrect", errors));
     }
     req.body = {
-        userId: String(req.body.userId).trim(),
+        ...(req.body.userId !== undefined ? { userId: String(req.body.userId).trim() } : {}),
         courseId: String(req.body.courseId).trim(),
         title: String(req.body.title).trim(),
         note: String(req.body.note).trim(),
@@ -37,7 +38,7 @@ const validateNote = (req, res, next) => {
 exports.validateNote = validateNote;
 const validatePartialNote = (req, res, next) => {
     const errors = {};
-    const allowedFields = ["userId", "courseId", "title", "note"];
+    const allowedFields = ["userId", "courseId", "title", "note"]; // userId is accepted for compatibility, but backend does not trust it for ownership
     const dto = {};
     for (const field of allowedFields) {
         if (req.body[field] !== undefined)
